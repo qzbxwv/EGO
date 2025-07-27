@@ -1,0 +1,51 @@
+# файлы окружения
+.env
+*.env.local
+*.env.*.local
+
+# files
+uploads/
+
+# логи
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# зависимости
+node_modules/
+/frontend/node_modules
+/backend/go-api/vendor
+/backend/python-api/venv
+/backend/python-api/env
+
+# сборки и артефакты
+/frontend/build/
+/frontend/.svelte-kit/
+/backend/go-api/app
+/backend/go-api/go-api
+
+# артефакты Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# файлы IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# системные
+.DS_Store
+Thumbs.db
+
+# докер 
+docker-data/
+postgres-data/
+
+# DELETE
+frontend/
+
+.env.development

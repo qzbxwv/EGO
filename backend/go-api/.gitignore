@@ -1,0 +1,6 @@
+/ego-go-backend 
+*.exe
+
+.env
+
+*.db

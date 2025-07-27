@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env.development
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ego-network
+
+  python-api:
+    build:
+      context: ./backend/python-api
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/python-api:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ego-network
+
+  go-api:
+    build:
+      context: ./backend/go-api
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}?sslmode=disable
+      - PYTHON_BACKEND_URL=http://python-api:8000
+      - SERVER_ADDRESS=:8080
+      - SECRET_KEY=${SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    env_file: .env.development
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/go-api:/app
+    depends_on:
+      - postgres-db
+      - python-api
+    networks:
+      - ego-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - go-api
+    networks:
+      - ego-network
+
+networks:
+  ego-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
