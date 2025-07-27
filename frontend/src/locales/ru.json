@@ -1,0 +1,52 @@
+{
+  "sidebar": {
+    "title": "EGO",
+    "logout": "Выйти",
+    "no_sessions": "Нет доступных сессий.",
+    "delete_confirm": "Вы уверены, что хотите удалить сессию?",
+    "delete_action": "Удалить",
+    "cancel_action": "Отмена",
+    "session_deleted": "Сессия удалена"
+  },
+  "chat": {
+    "new_chat": "Новый чат",
+    "placeholder": "Спросите EGO...",
+    "welcome_title": "EGO",
+    "welcome_subtitle": "Выберите чат или начните новый диалог.",
+    "landing_subtitle": "Выберите существующую сессию из списка слева или начните новую.",
+    "landing_button": "Начать новый чат",
+    "you": "Вы",
+    "instructions_title": "Пользовательские инструкции",
+    "instructions_prompt": "Эти инструкции будут применяться ко всем будущим запросам в этой сессии.",
+    "save": "Сохранить",
+    "stop_generation": "Остановить генерацию",
+    "generation_stopped": "Генерация остановлена.",
+    "start_dialog_first": "Сначала начните диалог, чтобы задать инструкции."
+  },
+  "login": {
+    "welcome": "С возвращением",
+    "prompt": "Войдите в свой аккаунт EGO",
+    "username": "Имя пользователя",
+    "username_placeholder": "Ваш логин",
+    "password": "Пароль",
+    "login_button": "Войти",
+    "loading_button": "Вход...",
+    "no_account": "Нет аккаунта?",
+    "register": "Зарегистрироваться",
+    "or": "ИЛИ"
+  },
+  "register": {
+    "create_account": "Создать аккаунт",
+    "prompt": "Присоединяйтесь к EGO",
+    "username_placeholder": "Придумайте логин",
+    "confirm_password": "Подтвердите пароль",
+    "register_button": "Зарегистрироваться",
+    "loading_button": "Регистрация...",
+    "have_account": "Уже есть аккаунт?",
+    "login": "Войти"
+  },
+  "toasts": {
+    "login_success": "Успешный вход!",
+    "instructions_saved": "Инструкции сохранены!"
+  }
+}

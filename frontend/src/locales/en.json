@@ -1,0 +1,52 @@
+{
+  "sidebar": {
+    "title": "EGO",
+    "logout": "Logout",
+    "no_sessions": "No sessions available.",
+    "delete_confirm": "Are you sure you want to delete this session?",
+    "delete_action": "Delete",
+    "cancel_action": "Cancel",
+    "session_deleted": "Session deleted"
+  },
+  "chat": {
+    "new_chat": "New Chat",
+    "placeholder": "Ask EGO...",
+    "welcome_title": "EGO",
+    "welcome_subtitle": "Select a chat or start a new one.",
+    "landing_subtitle": "Select an existing session from the list on the left or start a new one.",
+    "landing_button": "Start a new chat",
+    "you": "You",
+    "instructions_title": "Custom Instructions",
+    "instructions_prompt": "These instructions will apply to all future requests in this session.",
+    "save": "Save",
+    "stop_generation": "Stop generation",
+    "generation_stopped": "Generation stopped.",
+    "start_dialog_first": "Start a dialog first to set instructions."
+  },
+  "login": {
+    "welcome": "Welcome Back",
+    "prompt": "Log in to your EGO account",
+    "username": "Username",
+    "username_placeholder": "Your username",
+    "password": "Password",
+    "login_button": "Log In",
+    "loading_button": "Logging In...",
+    "no_account": "Don't have an account?",
+    "register": "Sign Up",
+    "or": "OR" 
+  },
+  "register": {
+    "create_account": "Create Account",
+    "prompt": "Join EGO",
+    "username_placeholder": "Choose a username",
+    "confirm_password": "Confirm Password",
+    "register_button": "Sign Up",
+    "loading_button": "Signing Up...",
+    "have_account": "Already have an account?",
+    "login": "Log In"
+  },
+  "toasts": {
+    "login_success": "Login successful!",
+    "instructions_saved": "Instructions saved!"
+  }
+}

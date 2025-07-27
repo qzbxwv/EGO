@@ -36,11 +36,12 @@ class EgoSearch(Tool):
         print(f"--- EGO SEARCH QUERY: {query} ---")
         
         egosearch_tool = types.Tool(google_search=types.GoogleSearch()) 
+        url_context_tool = types.Tool(url_context = types.UrlContext)
         response_text, _ = await self.backend.generate(
             prompt_parts=[query],
             temp=0.1, 
             sys_inst=EGO_SEARCH_PROMPT_RU, 
-            tools=[egosearch_tool]
+            tools=[egosearch_tool, url_context_tool]
         )
         return response_text
 
@@ -81,7 +82,6 @@ class EgoCalc(Tool):
         if not self._is_safe_expr(query):
             return "Ошибка: выражение содержит недопустимые символы."
         try:
-            # Безопасное вычисление
             result = eval(query, {"__builtins__": {}}, {})
             return str(result)
         except Exception as e:

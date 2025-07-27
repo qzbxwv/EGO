@@ -45,7 +45,5 @@ Thumbs.db
 docker-data/
 postgres-data/
 
-# DELETE
-frontend/
-
+tmp/
 .env.development

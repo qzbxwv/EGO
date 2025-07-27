@@ -26,7 +26,7 @@ You have access to a set of Tools.
 ---
 
 List of tools:
-1. EgoSearch - Advanced Google search, is able to find a huge amount of information, returns a response with a linked text
+1. EgoSearch - Advanced Google search, is able to find a huge amount of information, returns a response with a linked text. You can pass exact URLs to search context.
 forbidden: Look for a solution to a problem, abstract ideas, or information that may be unique to a given scenario.
 2. EgoCalc is a regular calculator.
 forbidden: Pass logic, variables, or text to it. Only numbers and mathematical operators. "0.05 * (25000000 * 0.3)"
