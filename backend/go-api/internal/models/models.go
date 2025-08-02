@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -11,6 +12,14 @@ type User struct {
 	HashedPassword string    `db:"hashed_password" json:"-"`
 	Role           string    `db:"role" json:"role"`
 	CreatedAt      time.Time `db:"created_at" json:"created_at"`
+}
+
+type S3Config struct {
+	Endpoint string
+	Region   string
+	KeyID    string
+	AppKey   string
+	Bucket   string
 }
 
 type ChatSession struct {
@@ -54,11 +63,14 @@ type FilePayload struct {
 }
 
 type StreamRequest struct {
-	Query              string        `json:"query"`
-	Mode               string        `json:"mode"`
-	SessionID          *int          `json:"session_id,omitempty"`
-	Files              []FilePayload `json:"files,omitempty"`
-	CustomInstructions *string       `json:"custom_instructions,omitempty"`
+	Query               string        `json:"query"`
+	Mode                string        `json:"mode"`
+	SessionID           *int          `json:"session_id,omitempty"`
+	Files               []FilePayload `json:"files,omitempty"`
+	CustomInstructions  *string       `json:"custom_instructions,omitempty"`
+	IsRegeneration      bool          `json:"is_regeneration,omitempty"`
+	RequestLogIDToRegen int64         `json:"request_log_id_to_regen,omitempty"`
+	TempID              int64         `json:"temp_id,omitempty"`
 }
 
 type ToolCall struct {
@@ -67,13 +79,13 @@ type ToolCall struct {
 }
 
 type ThoughtResponse struct {
-	Thoughts          string     `json:"thoughts"`
-	Evaluate          string     `json:"evaluate"`
-	Confidence        float64    `json:"confidence"`
-	ToolReasoning     string     `json:"tool_reasoning"`
-	ToolCalls         []ToolCall `json:"tool_calls"`
-	ThoughtHeader     string     `json:"thoughts_header"`
-	NextThoughtNeeded bool       `json:"nextThoughtNeeded"`
+	Thoughts          string      `json:"thoughts"`
+	Evaluate          string      `json:"evaluate"`
+	Confidence        json.Number `json:"confidence"`
+	ToolReasoning     string      `json:"tool_reasoning"`
+	ToolCalls         []ToolCall  `json:"tool_calls"`
+	ThoughtHeader     string      `json:"thoughts_header"`
+	NextThoughtNeeded bool        `json:"nextThoughtNeeded"`
 }
 
 type ThoughtResponseWithData struct {
@@ -140,4 +152,8 @@ type PythonRequest struct {
 type CachedFile struct {
 	URI      string `json:"uri"`
 	MimeType string `json:"mime_type"`
+}
+
+type UpdateLogRequest struct {
+	Query string `json:"query"`
 }

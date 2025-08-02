@@ -47,13 +47,13 @@ func (h *SessionHandler) UpdateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.DB.GetSessionByID(sessionID, user.ID)
+	isOwner, err := h.DB.CheckSessionOwnership(sessionID, user.ID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "Session not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		http.Error(w, "Server error checking ownership", http.StatusInternalServerError)
+		return
+	}
+	if !isOwner {
+		http.Error(w, "Session not found or access denied", http.StatusNotFound)
 		return
 	}
 
@@ -64,7 +64,21 @@ func (h *SessionHandler) UpdateSession(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to update session instructions", http.StatusInternalServerError)
 			return
 		}
-		session.CustomInstructions = req.CustomInstructions
+	}
+
+	if req.Title != nil {
+		err = h.DB.UpdateSessionTitle(sessionID, user.ID, *req.Title)
+		if err != nil {
+			log.Printf("Failed to update title for session %d: %v", sessionID, err)
+			http.Error(w, "Failed to update session title", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	session, err := h.DB.GetSessionByID(sessionID, user.ID)
+	if err != nil {
+		http.Error(w, "Server error fetching updated session", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

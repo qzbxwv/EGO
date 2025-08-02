@@ -1,5 +1,5 @@
 import { PUBLIC_EGO_BACKEND_URL } from '$env/static/public';
-import { auth, logout, setAccessToken } from '$lib/stores/auth.svelte.ts';
+import { auth, clearAuthData, setAccessToken } from '$lib/stores/auth.svelte.ts';
 import { browser } from '$app/environment';
 import { toast } from 'svelte-sonner';
 
@@ -20,6 +20,8 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 async function request(path: string, options: RequestInit = {}, customFetch?: typeof fetch) {
+	const isAuthEndpoint = path.startsWith('/auth/login') || path.startsWith('/auth/register');
+
 	const fetcher = customFetch || (browser ? window.fetch : fetch);
 	const headers = new Headers(options.headers || {});
 	const token = auth.accessToken;
@@ -35,7 +37,7 @@ async function request(path: string, options: RequestInit = {}, customFetch?: ty
 
 	let response = await fetcher(`${BASE_URL}${path}`, requestOptions);
 
-	if (response.status === 401) {
+	if (response.status === 401 && !isAuthEndpoint) {
 		if (isRefreshing) {
 			return new Promise((resolve, reject) => {
 				failedQueue.push({ resolve, reject });
@@ -70,31 +72,34 @@ async function request(path: string, options: RequestInit = {}, customFetch?: ty
 				response = await fetcher(`${BASE_URL}${path}`, requestOptions);
 
 				processQueue(null, newAccessToken);
-				isRefreshing = false;
-				
 			} catch (e) {
 				processQueue(e, null);
-				isRefreshing = false;
 				if (browser) {
-					toast.error('Сессия истекла. Пожалуйста, войдите заново.');
-					logout();
+					sessionStorage.clear();
+					clearAuthData();
 				}
 				return Promise.reject(e);
+			} finally {
+				isRefreshing = false;
 			}
 		} else {
 			if (browser) {
-				logout();
+				sessionStorage.clear();
+				clearAuthData();
 			}
-			return Promise.reject('No refresh token');
+			isRefreshing = false; 
+			return Promise.reject(new Error('No refresh token available.'));
 		}
 	}
 
 	if (!response.ok) {
 		try {
 			const errorData = await response.json();
-			throw new Error(errorData.message || `Ошибка сервера: ${response.status}`);
+			const errorMessage = errorData.detail || errorData.message || `Ошибка сервера: ${response.status}`;
+			throw new Error(errorMessage);
 		} catch (e: any) {
-			throw new Error(e.message || response.statusText || `Ошибка сервера: ${response.status}`);
+			const errorMessage = e.message || response.statusText || `Ошибка сервера: ${response.status}`;
+			throw new Error(errorMessage);
 		}
 	}
 

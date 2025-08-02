@@ -14,7 +14,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
   python-api:
     build:
       context: ./backend/python-api
@@ -23,8 +22,12 @@ services:
     env_file: .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - sandbox_tmp_data:/app/sandbox_tmp
     networks:
       - ego-network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   go-api:
     build:
@@ -74,3 +77,5 @@ networks:
 volumes:
   postgres-data:
   frontend-build:
+  sandbox_tmp_data:
+    name: sandbox_tmp_data

@@ -23,8 +23,12 @@ services:
     volumes:
       - ./backend/python-api:/app
       - /var/run/docker.sock:/var/run/docker.sock
+      - sandbox_tmp_data:/app/sandbox_tmp
     networks:
       - ego-network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   go-api:
     build:
@@ -71,3 +75,6 @@ networks:
 volumes:
   postgres-data:
     driver: local
+  sandbox_tmp_data:
+    driver: local
+    name: sandbox_tmp_data

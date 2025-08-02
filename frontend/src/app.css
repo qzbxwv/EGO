@@ -31,10 +31,17 @@
 
 @layer components {
 	.bg-circle {
-		@apply absolute w-[60vmax] h-[60vmax] rounded-full;
-		background: radial-gradient(circle, #450292 0%, transparent 60%);
-		opacity: 0.15;
+		@apply absolute w-[50vmax] h-[50vmax] rounded-full;
+		background: radial-gradient(circle, #8A2BE2 0%, #4B0082 35%, transparent 70%);
+		filter: blur(100px);
+		opacity: 0.2;
 		animation: pulse-and-move 35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+	}
+
+	.bg-circle.secondary {
+		background: radial-gradient(circle, #9370DB 0%, #C71585 35%, transparent 70%);
+		animation-name: pulse-and-move-2;
+		animation-duration: 40s;
 	}
 
 	.input-container {
@@ -101,11 +108,34 @@
 }
 
 @keyframes pulse-and-move {
-	0% { transform: scale(1) translate(0, 0); opacity: 0.15; }
-	25% { transform: scale(1.05) translate(2vw, -3vh); opacity: 0.17; }
-	50% { transform: scale(0.95) translate(-2vw, 2vh); opacity: 0.12; }
-	75% { transform: scale(1.03) translate(-1vw, 3vh); opacity: 0.16; }
-	100% { transform: scale(1) translate(0, 0); opacity: 0.15; }
+	0% { 
+        transform: scale(1) translate(0, 0) rotate(0deg); 
+        opacity: 0.2; 
+    }
+	25% { 
+        transform: scale(1.15) translate(8vw, -10vh) rotate(90deg); 
+        opacity: 0.25; 
+    }
+	50% { 
+        transform: scale(0.9) translate(-10vw, 8vh) rotate(180deg); 
+        opacity: 0.15; 
+    }
+	75% { 
+        transform: scale(1.1) translate(-5vw, -8vh) rotate(270deg); 
+        opacity: 0.22; 
+    }
+	100% { 
+        transform: scale(1) translate(0, 0) rotate(360deg); 
+        opacity: 0.2; 
+    }
+}
+
+@keyframes pulse-and-move-2 {
+	0% { transform: scale(1) translate(0, 0) rotate(0deg); opacity: 0.15; }
+	25% { transform: scale(0.95) translate(-6vw, 7vh) rotate(-90deg); opacity: 0.2; }
+	50% { transform: scale(1.15) translate(4vw, -6vh) rotate(-180deg); opacity: 0.18; }
+	75% { transform: scale(1) translate(5vw, 4vh) rotate(-270deg); opacity: 0.22; }
+	100% { transform: scale(1) translate(0, 0) rotate(-360deg); opacity: 0.15; }
 }
 
 @keyframes loading-wipe {

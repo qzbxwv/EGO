@@ -6,10 +6,23 @@
 	import { _ } from 'svelte-i18n';
 
 	import { auth, logout } from '$lib/stores/auth.svelte.ts';
-	import { sessionStore, fetchSessions, removeSession } from '$lib/stores/sessions.svelte.ts';
+	import { sessionStore, removeSession, clearUserSessions } from '$lib/stores/sessions.svelte.ts';
 	import { uiStore, setShowSettingsModal } from '$lib/stores/ui.svelte.ts';
 	import { api } from '$lib/api';
 	import { LOGO_URL } from '$lib/config';
+	import { resetStreamStore } from '$lib/stores/stream.svelte.ts';
+	import { disconnectWebSocket } from '$lib/ws-client';
+	import { browser } from '$app/environment';
+
+	function handleLogout() {
+		disconnectWebSocket();
+		clearUserSessions();
+		resetStreamStore();
+		if (browser) {
+			sessionStorage.clear();
+		}
+		logout();
+	}
 
 	function confirmDelete(sessionId: number, event: MouseEvent) {
 		event.preventDefault();
@@ -25,7 +38,7 @@
 						toast.success($_('sidebar.session_deleted'));
 
 						removeSession(sessionId);
-						
+
 						if (isCurrentSession) {
 							await goto('/chat/new', { invalidateAll: true });
 						}
@@ -40,16 +53,10 @@
 			}
 		});
 	}
-	
+
 	function newChat() {
 		goto('/chat/new', { invalidateAll: true });
 	}
-
-	$effect(() => {
-		if (auth.user) {
-			fetchSessions();
-		}
-	});
 </script>
 
 <aside class="w-72 bg-secondary/80 backdrop-blur-lg flex flex-col p-4 border-r border-tertiary h-full">
@@ -84,7 +91,8 @@
 				{#each sessionStore.sessions as session (session.id)}
 					<a
 						href="/chat/{session.id}"
-						class="flex items-center justify-between p-3 rounded-lg text-sm group transition-colors duration-200 {$page.params.sessionID === String(session.id)
+						class="flex items-center justify-between p-3 rounded-lg text-sm group transition-colors duration-200 {$page.params.sessionID ===
+						String(session.id)
 							? 'bg-accent text-white'
 							: 'hover:bg-tertiary/50'}"
 					>
@@ -94,7 +102,7 @@
 						</div>
 						<button
 							onclick={(e) => confirmDelete(session.id, e)}
-							class="p-1 rounded-md text-text-secondary hover:bg-red-500/50 hover:text-white opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+							class="p-1 rounded-md text-text-secondary hover:bg-red-500/50 hover:text-white transition-all focus:opacity-100 opacity-100 md:opacity-0 md:group-hover:opacity-100"
 							aria-label={`Удалить сессию ${session.title}`}
 						>
 							<Trash2 class="w-4 h-4" />
@@ -121,7 +129,7 @@
 					{auth.user?.username}
 				</span>
 				<button
-					onclick={logout}
+					onclick={handleLogout}
 					class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium text-red-400 hover:bg-red-500/20 hover:text-red-300 transform hover:scale-105 transition-all duration-200"
 				>
 					<LogOut class="w-4 h-4" />

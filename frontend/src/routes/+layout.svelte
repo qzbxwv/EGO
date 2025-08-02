@@ -6,13 +6,8 @@
 	import { Toaster } from 'svelte-sonner';
 	import { locale } from 'svelte-i18n';
 	import { browser } from '$app/environment';
-	import { initAuthStore } from '$lib/stores/auth.svelte.ts';
 
 	const { children } = $props();
-
-	if (browser) {
-		initAuthStore();
-	}
 	
 	let showSidebar = $state(true);
 	let isMobile = $state(false);
@@ -45,7 +40,7 @@
 
 <div class="fixed inset-0 z-[-1] overflow-hidden bg-primary">
 	<div class="bg-circle -right-[20vw] -top-[20vh]" style="animation-delay: -10s;"></div>
-	<div class="bg-circle -left-[20vw] -bottom-[20vh]"></div>
+	<div class="bg-circle secondary -left-[20vw] -bottom-[20vh]"></div>
 </div>
 
 <div class="h-screen w-full font-sans text-text-primary">

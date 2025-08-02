@@ -1,12 +1,11 @@
 import { PUBLIC_EGO_BACKEND_URL } from '$env/static/public';
-import { auth } from '$lib/stores/auth.svelte.ts';
 import type { ChatSession, WsEvent } from '$lib/types';
-import { get } from 'svelte/store';
 
 export interface WebSocketHandlers {
 	onOpen: () => void;
 	onClose: () => void;
 	onSessionCreated: (session: ChatSession) => void;
+	onLogCreated: (log: { log_id: number; temp_id: number }) => void;
 	onThoughtHeader: (header: string) => void;
 	onChunk: (text: string) => void;
 	onDone: () => void;
@@ -14,7 +13,16 @@ export interface WebSocketHandlers {
 }
 
 export interface EgoWebSocket {
-	send: (payload: { query: string; mode: string; session_id: number | null; files?: any[] }) => void;
+	send: (payload: { 
+		query: string; 
+		mode: string; 
+		session_id: number | null; 
+		files?: any[]; 
+		is_regeneration: boolean; 
+		custom_instructions?: string;
+		log_id?: number;
+		temp_id?: number;
+	}) => void;
 	close: () => void;
 }
 
@@ -32,13 +40,13 @@ export function connectWebSocket(token: string, handlers: WebSocketHandlers): Eg
 	ws.onclose = (event) => {
 		if (event.code !== 1000) {
 			console.error(`WebSocket closed unexpectedly. Code: ${event.code}, Reason: ${event.reason}`);
-			handlers.onError(`Соединение потеряно (код: ${event.code})`);
 		}
 		handlers.onClose();
 	};
 	
 	ws.onerror = (error) => {
 		console.error("WebSocket error observed:", error);
+		handlers.onError('Произошла ошибка соединения WebSocket.');
 	};
 	
 	ws.onmessage = (event) => {
@@ -57,31 +65,24 @@ export function connectWebSocket(token: string, handlers: WebSocketHandlers): Eg
 				case 'session_created':
 					handlers.onSessionCreated(data);
 					break;
-				
+				case 'log_created':
+					handlers.onLogCreated(data);
+					break;
 				case 'thought_header':
 					if (typeof data === 'string' && data) {
 						handlers.onThoughtHeader(data);
 					}
 					break;
-				
 				case 'chunk':
 					if (data && typeof data.text === 'string' && data.text) {
 						handlers.onChunk(data.text);
 					}
 					break;
-
 				case 'done':
 					handlers.onDone();
 					break;
-
-				case 'status':
-				case 'usage_update':
-				case 'tool_call':
-				case 'tool_output':
-					break;
-
 				default:
-					console.warn("Получен неизвестный тип события WebSocket:", wsEvent.type);
+					break;
 			}
 		} catch (error) {
 			console.error("Failed to parse WebSocket message:", event.data, error);
@@ -94,7 +95,7 @@ export function connectWebSocket(token: string, handlers: WebSocketHandlers): Eg
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.send(JSON.stringify(payload));
 			} else {
-				handlers.onError('Соединение не открыто. Пожалуйста, обновите страницу.');
+				console.warn("Attempted to send message, but WebSocket is not open.");
 			}
 		},
 		close: () => {

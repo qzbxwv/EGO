@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"egobackend/internal/auth"
 	"egobackend/internal/database"
 	"egobackend/internal/handlers"
 	"egobackend/internal/models"
+	"egobackend/internal/storage"
 	"egobackend/internal/websocket"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -20,20 +21,18 @@ import (
 
 func CoopMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
 		next.ServeHTTP(w, r)
 	})
 }
 
-func startFileCleanupRoutine(db *database.DB) {
-	log.Println("[CLEANUP] Запуск фонового процесса очистки старых файлов...")
-	ticker := time.NewTicker(1 * time.Hour)
+func startFileCleanupRoutine(db *database.DB, s3Service *storage.S3Service) {
+	log.Println("[CLEANUP] Запуск фонового процесса очистки старых файлов из S3...")
+	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
-	uploadDir := "./uploads"
-
 	for range ticker.C {
-		log.Println("[CLEANUP] Выполняется плановая очистка старых файлов (старше 24 часов)...")
+		log.Println("[CLEANUP] Выполняется плановая очистка старых файлов (старше 24 часов) из S3...")
 
 		deletedURIs, err := db.DeleteOldFileAttachments(24 * time.Hour)
 		if err != nil {
@@ -46,24 +45,14 @@ func startFileCleanupRoutine(db *database.DB) {
 			continue
 		}
 
-		log.Printf("[CLEANUP] Найдено %d записей в БД для удаления. Начинаю удаление физических файлов...", len(deletedURIs))
+		log.Printf("[CLEANUP] Найдено %d записей в БД для удаления. Начинаю удаление объектов из S3...", len(deletedURIs))
 
-		deletedCount := 0
-		for _, uri := range deletedURIs {
-			filePath := filepath.Join(uploadDir, uri)
-			err := os.Remove(filePath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					log.Printf("... [CLEANUP] ПРЕДУПРЕЖДЕНИЕ: Файл %s для удаления не найден на диске.", filePath)
-				} else {
-					log.Printf("!!! [CLEANUP] ОШИБКА при удалении файла %s: %v", filePath, err)
-				}
-			} else {
-				log.Printf("... [CLEANUP] Файл %s успешно удален.", filePath)
-				deletedCount++
-			}
+		err = s3Service.DeleteFiles(context.Background(), deletedURIs)
+		if err != nil {
+			log.Printf("!!! [CLEANUP] ОШИБКА при удалении файлов из S3: %v", err)
+		} else {
+			log.Printf("[CLEANUP] Очистка S3 завершена. Успешно удалено %d объектов.", len(deletedURIs))
 		}
-		log.Printf("[CLEANUP] Очистка завершена. Успешно удалено %d физических файлов.", deletedCount)
 	}
 }
 
@@ -74,8 +63,16 @@ func main() {
 	dbPath := os.Getenv("DATABASE_URL")
 	serverAddr := os.Getenv("SERVER_ADDRESS")
 	jwtSecret := os.Getenv("SECRET_KEY")
+	s3Config := models.S3Config{
+		Endpoint: os.Getenv("S3_ENDPOINT"),
+		Region:   os.Getenv("S3_REGION"),
+		KeyID:    os.Getenv("S3_ACCESS_KEY_ID"),
+		AppKey:   os.Getenv("S3_SECRET_ACCESS_KEY"),
+		Bucket:   os.Getenv("S3_BUCKET_NAME"),
+	}
+
 	pythonBackendURL := os.Getenv("PYTHON_BACKEND_URL")
-	if dbPath == "" || serverAddr == "" || jwtSecret == "" || pythonBackendURL == "" {
+	if dbPath == "" || serverAddr == "" || jwtSecret == "" || pythonBackendURL == "" || s3Config.Endpoint == "" || s3Config.Region == "" || s3Config.KeyID == "" || s3Config.AppKey == "" || s3Config.Bucket == "" {
 		log.Fatal("Критическая ошибка: одна или несколько переменных окружения не установлены")
 	}
 
@@ -88,7 +85,12 @@ func main() {
 		log.Fatalf("Критическая ошибка! Не удалось выполнить миграцию БД: %v", err)
 	}
 
-	go startFileCleanupRoutine(db)
+	s3Service, err := storage.NewS3Service(s3Config)
+	if err != nil {
+		log.Fatalf("Критическая ошибка! Не удалось создать S3 сервис: %v", err)
+	}
+
+	go startFileCleanupRoutine(db, s3Service)
 
 	authSvc, err := auth.NewAuthService(jwtSecret)
 	if err != nil {
@@ -103,7 +105,7 @@ func main() {
 
 	r := chi.NewRouter()
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:4173"},
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:4173", "http://localhost"},
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -130,6 +132,7 @@ func main() {
 		r.Get("/sessions/{sessionID}/history", sessionHandler.GetHistory)
 		r.Delete("/sessions/{sessionID}", sessionHandler.DeleteSession)
 		r.Patch("/sessions/{sessionID}", sessionHandler.UpdateSession)
+		r.Patch("/logs/{logID}", sessionHandler.EditLog)
 
 		r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
 			user, ok := r.Context().Value(handlers.UserContextKey).(*models.User)
@@ -137,7 +140,7 @@ func main() {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			websocket.ServeWs(hub, w, r, user, db, pythonBackendURL)
+			websocket.ServeWs(hub, w, r, user, db, pythonBackendURL, s3Service)
 		})
 	})
 

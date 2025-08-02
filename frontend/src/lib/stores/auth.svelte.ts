@@ -1,7 +1,6 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 import type { User } from '$lib/types';
-import { clearUserSessions } from '$lib/stores/sessions.svelte.ts';
 
 let user = $state<User | null>(null);
 let accessToken = $state<string | null>(null);
@@ -31,8 +30,7 @@ export function setAccessToken(token: string) {
     }
 }
 
-export function logout() {
-	clearUserSessions();
+export function clearAuthData() {
 	user = null;
 	accessToken = null;
 	refreshToken = null;
@@ -40,9 +38,17 @@ export function logout() {
 		localStorage.removeItem('user');
 		localStorage.removeItem('accessToken');
 		localStorage.removeItem('refreshToken');
+	}
+}
+
+
+export function logout() {
+	clearAuthData();
+	if (browser) {
 		goto('/login', { replaceState: true });
 	}
 }
+
 
 export function initAuthStore() {
 	if (browser) {
@@ -57,7 +63,7 @@ export function initAuthStore() {
 				refreshToken = refresh;
 			} catch (e) {
 				console.error("Ошибка парсинга данных пользователя из localStorage", e);
-				logout();
+				clearAuthData();
 			}
 		}
 	}

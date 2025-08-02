@@ -10,26 +10,28 @@ import (
 	"egobackend/internal/database"
 	"egobackend/internal/engine"
 	"egobackend/internal/models"
+	"egobackend/internal/storage"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	hub    *Hub
-	conn   *websocket.Conn
-	send   chan []byte
-	db     *database.DB
-	pyURL  string
-	user   *models.User
-	mu     sync.Mutex
-	closed bool
+	hub       *Hub
+	conn      *websocket.Conn
+	send      chan []byte
+	db        *database.DB
+	pyURL     string
+	user      *models.User
+	s3Service *storage.S3Service
+	mu        sync.Mutex
+	closed    bool
 }
 
 const (
 	writeWait      = 10 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 20 * 1024 * 1024 // 20 MB
+	maxMessageSize = 20 * 1024 * 1024
 )
 
 var upgrader = websocket.Upgrader{
@@ -38,13 +40,21 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, user *models.User, db *database.DB, pyURL string) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, user *models.User, db *database.DB, pyURL string, s3Service *storage.S3Service) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade error:", err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), user: user, db: db, pyURL: pyURL}
+	client := &Client{
+		hub:       hub,
+		conn:      conn,
+		send:      make(chan []byte, 256),
+		user:      user,
+		db:        db,
+		pyURL:     pyURL,
+		s3Service: s3Service,
+	}
 	client.hub.register <- client
 
 	go client.writePump()
@@ -112,13 +122,13 @@ func (c *Client) handleIncomingMessage(message []byte) {
 
 	log.Printf("WS Запрос от %s (ID %d), Mode: %s -> делегируется Процессору", c.user.Username, c.user.ID, req.Mode)
 
-	processor := engine.NewProcessor(c.db, c.pyURL)
+	processor := engine.NewProcessor(c.db, c.pyURL, c.s3Service)
 
 	callback := func(eventType string, data interface{}) {
 		c.sendEvent(eventType, data)
 	}
 
-	processor.ProcessRequest(req, c.user, callback)
+	processor.ProcessRequest(req, c.user, req.TempID, callback)
 }
 
 func (c *Client) sendEvent(eventType string, data interface{}) {

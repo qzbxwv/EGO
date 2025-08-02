@@ -19,7 +19,7 @@ export interface FileAttachment {
 export interface ChatSession {
 	id: number;
 	title: string;
-	mode: 'fast' | 'heavy';
+	mode: string;
 	custom_instructions: string | null;
 	created_at: string;
 }
@@ -38,6 +38,7 @@ export interface ChatMessage {
 	text: string;
 	isThinking?: boolean;
 	attachments?: FileAttachment[];
+	logId?: number;
 }
 
 export interface FilePayload {
@@ -48,9 +49,13 @@ export interface FilePayload {
 
 export interface WsMessage {
 	query: string;
-	mode: 'fast' | 'heavy';
+	mode: string;
 	session_id?: number | null;
 	files?: FilePayload[];
+	is_regeneration?: boolean;
+	request_log_id_to_regen?: number;
+	custom_instructions?: string;
+	temp_id?: number;
 }
 
 export interface WsEvent {

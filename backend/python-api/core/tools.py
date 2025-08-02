@@ -7,6 +7,9 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from utils.logger import logger
+import sympy
+from sympy import pi, E
+import traceback
 
 
 from .llm_backend import LLMBackend, GeminiBackend
@@ -31,7 +34,7 @@ class EgoSearch(Tool):
         self.backend = backend
 
     async def use(self, query: str) -> str:
-        from .prompts import EGO_SEARCH_PROMPT_RU
+        from .prompts import EGO_SEARCH_PROMPT_EN
         
         print(f"--- EGO SEARCH QUERY: {query} ---")
         
@@ -40,7 +43,7 @@ class EgoSearch(Tool):
         response_text, _ = await self.backend.generate(
             prompt_parts=[query],
             temp=0.1, 
-            sys_inst=EGO_SEARCH_PROMPT_RU, 
+            sys_inst=EGO_SEARCH_PROMPT_EN, 
             tools=[egosearch_tool, url_context_tool]
         )
         return response_text
@@ -54,13 +57,13 @@ class AlterEgo(Tool):
         self.backend = backend
     
     async def use(self, query: str) -> str:
-        from .prompts import ALTER_EGO_PROMPT_RU
+        from .prompts import ALTER_EGO_PROMPT_EN
         print(f"--- ALTER TAKES OVER EGO WITH QUERY: {query} ---")
         
         response_text, _ = await self.backend.generate(
             prompt_parts=[query],
             temp=0.9, 
-            sys_inst=ALTER_EGO_PROMPT_RU
+            sys_inst=ALTER_EGO_PROMPT_EN
         )
         print(f"--- ALTER RESPONSE: {response_text} ---")
         return response_text
@@ -70,28 +73,31 @@ class AlterEgo(Tool):
 class EgoCalc(Tool):
     def __init__(self):
         super().__init__(
-            name="EgoCalc", 
-            desc="Ego выполняет математические вычисления. Поддерживаются базовые операции."
+            name="EgoCalc",
+            desc="Выполняет математические вычисления используя SymPy"
         )
-    
-    def _is_safe_expr(self, expr: str) -> bool:
-        return bool(re.fullmatch(r'[0-9\.\+\-\*\/\(\)\s]+', expr))
-
+        
     async def use(self, query: str) -> str:
         print(f"--- EGO, CALC! with query: {query} ---")
-        if not self._is_safe_expr(query):
-            return "Ошибка: выражение содержит недопустимые символы."
         try:
-            result = eval(query, {"__builtins__": {}}, {})
+            expr = sympy.sympify(query)
+            if expr.is_Number:
+                result = float(expr)
+                
+            else:
+                result = expr
+                
             return str(result)
+        except (sympy.SympifyError, SyntaxError) as e:
+            return f"Ошибка при парсинге или вычислении выражения: {e}. Проверь синтаксис или используй только математические функции и символы, поддерживаемые SymPy (например, sin, cos, log, sqrt, pi, E)." 
         except Exception as e:
-            return f"Ошибка при вычислении: {e}"
-        
+            return f"Неожиданная ошибка: {e}"
+
 class EgoCode(Tool):
     def __init__(self):
         super().__init__(
             name="EgoCode",
-            desc="Выполняет Python код в безопасной песочнице EgoBox с ограниченными библиотеками (NumPy, SciPy, SymPy)."
+            desc="Выполняет Python код в безопасной песочнице EgoBox. Доступные библиотеки: NumPy, SciPy, SymPy."
         )
         try:
             self.docker_client = docker.from_env()
@@ -106,34 +112,59 @@ class EgoCode(Tool):
 
     def _execute_in_docker_sync(self, code_string: str) -> str:
         if not self.docker_client:
-            return "--- EGOBOX IS UNREACHABLE ---"
-
-        with tempfile.NamedTemporaryFile(mode='w+', dir=self.sandbox_dir_in_container, suffix='.py', delete=True) as tmp_file:
+            return "Execution failed: Docker client is not available."
+        
+        tmp_file = None
+        try:
+            tmp_file = tempfile.NamedTemporaryFile(
+                mode='w+',
+                dir=self.sandbox_dir_in_container,
+                suffix='.py',
+                delete=False,
+                encoding='utf-8'
+            )
             tmp_file.write(code_string)
             tmp_file.flush()
-
-            path_in_container = tmp_file.name
-            path_on_host = os.path.abspath(path_in_container.replace("/app", "./backend/python-api"))
-            filename = os.path.basename(path_in_container)
-            container_path = f"/sandbox/{filename}"
-            volume_mapping = {path_on_host: {'bind': container_path, 'mode': 'ro'}}
+            tmp_file_path = tmp_file.name
+            filename = os.path.basename(tmp_file_path)
             
-            print(f"--- EgoCode: Host path: {path_on_host} ---")
-            print(f"--- EgoCode: Container path: {container_path} ---")
+            container_script_path = f"/sandbox/{filename}"
+            volume_name = "sandbox_tmp_data"
 
-            try:
-                output = self.docker_client.containers.run(
-                    image="egobox:latest",
-                    command=["python", container_path],
-                    volumes=volume_mapping,
-                    remove=True,
-                    mem_limit="256m",
-                    cpu_shares=512,
-                    network_disabled=True 
-                )
-                return output.decode('utf-8', errors='replace').strip()
-            except Exception as e:
-                return f"Docker ERROR: {e}"
+            print(f"--- EgoCode: Running script {filename} in egobox container ---")
+            
+            container = self.docker_client.containers.run(
+                image="egobox:latest",
+                command=["python", container_script_path],
+                volumes={
+                    volume_name: {'bind': '/sandbox', 'mode': 'ro'}
+                },
+                detach=True, 
+                mem_limit="256m",
+                cpu_shares=512,
+                network_disabled=True
+            )
+
+            result = container.wait(timeout=30)
+            exit_code = result.get('StatusCode', -1)
+            
+            output = container.logs().decode('utf-8', errors='replace').strip()
+            
+            container.remove()
+
+            if exit_code == 0:
+                if not output:
+                    return "Code executed successfully with no output."
+                return f"Code executed successfully.\n--- OUTPUT ---\n{output}"
+            else:
+                return f"Code execution failed with exit code {exit_code}.\n--- ERROR LOG ---\n{output}"
+
+        except Exception as e:
+            print(f"!!! Docker ERROR in EgoCode: {traceback.format_exc()} !!!")
+            return f"Docker infrastructure ERROR: {e}"
+        finally:
+            if tmp_file and os.path.exists(tmp_file.name):
+                os.remove(tmp_file.name)
 
     async def use(self, query: str) -> str:
         print(f"--- EGO, CODE! with query: {query} ---")

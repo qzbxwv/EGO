@@ -9,6 +9,7 @@ import (
 	"egobackend/internal/database"
 	"egobackend/internal/engine"
 	"egobackend/internal/models"
+	"egobackend/internal/storage"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -16,6 +17,7 @@ import (
 type EgoHandler struct {
 	DB               *database.DB
 	PythonBackendURL string
+	S3Service        *storage.S3Service
 }
 
 func (h *EgoHandler) ProccessStream(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +44,7 @@ func (h *EgoHandler) ProccessStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	processor := engine.NewProcessor(h.DB, h.PythonBackendURL)
+	processor := engine.NewProcessor(h.DB, h.PythonBackendURL, h.S3Service)
 
 	callback := func(eventType string, data interface{}) {
 		eventData := map[string]interface{}{"type": eventType, "data": data}
@@ -51,7 +53,12 @@ func (h *EgoHandler) ProccessStream(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 
-	go processor.ProcessRequest(req, user, callback)
+	var sessionID int64
+	if req.SessionID != nil {
+		sessionID = int64(*req.SessionID)
+	}
+
+	go processor.ProcessRequest(req, user, sessionID, callback)
 }
 
 func (h *EgoHandler) writeError(w http.ResponseWriter, msg string, code int) {

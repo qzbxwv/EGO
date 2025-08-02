@@ -30,7 +30,7 @@
 				throw new Error('Сервер вернул неполные данные для входа.');
 			}
 		} catch (error: any) {
-			toast.error(error.message || 'Ошибка входа');
+			toast.error(error.message || 'Ошибка входа. Проверьте логин и пароль.');
 		} finally {
 			isLoading = false;
 		}

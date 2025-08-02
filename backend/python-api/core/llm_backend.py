@@ -43,7 +43,7 @@ class GeminiBackend(LLMBackend):
     async def get_client_for_session(self) -> Tuple[str, genai.Client]:
         return next(self.client_rotator)
 
-    async def upload_file(self, file_data: Any, client: genai.Client, api_key_for_log: str) -> Any: # Возвращаем Any
+    async def upload_file(self, file_data: Any, client: genai.Client, api_key_for_log: str) -> Any:
         import tempfile
 
         print(f"--- FILE API: Загрузка файла '{file_data.file_name}' с помощью ключа ...{api_key_for_log[-4:]} ---")

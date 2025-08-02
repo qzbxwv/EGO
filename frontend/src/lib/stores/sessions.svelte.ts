@@ -9,13 +9,17 @@ export const sessionStore = {
 	get isLoading() { return isLoadingSessions }
 };
 
-let hasFetched = false;
+export function setInitialSessions(initialSessions: ChatSession[]) {
+    sessions = initialSessions.sort((a, b) => b.id - a.id);
+    isLoadingSessions = false;
+}
 
 export function addSession(newSession: ChatSession) {
-	const exists = sessions.some(s => s.id === newSession.id);
-	if (!exists) {
-		sessions = [newSession, ...sessions];
-	}
+    if (sessions.some(s => s.id === newSession.id)) {
+        console.warn(`Attempted to add a duplicate session (ID: ${newSession.id}). Ignoring.`);
+        return;
+    }
+    sessions = [newSession, ...sessions];
 }
 
 export function updateSession(updatedSession: ChatSession) {
@@ -26,27 +30,7 @@ export function removeSession(sessionId: number) {
     sessions = sessions.filter((s: ChatSession) => s.id !== sessionId);
 }
 
-export async function fetchSessions() {
-	if (hasFetched) {
-		isLoadingSessions = false;
-		return;
-	}
-	
-	isLoadingSessions = true;
-	try {
-		const fetchedSessions = await api.get<ChatSession[]>('/sessions');
-		sessions = fetchedSessions;
-		hasFetched = true;
-	} catch (error: any) {
-		sessions = [];
-		console.error('Не удалось загрузить сессии:', error.message);
-	} finally {
-		isLoadingSessions = false;
-	}
-}
-
 export function clearUserSessions() {
 	sessions = [];
 	isLoadingSessions = true;
-	hasFetched = false;
 }

@@ -37,7 +37,7 @@
 				throw new Error('Не удалось автоматически войти. Попробуйте войти вручную.');
 			}
 		} catch (error: any) {
-			toast.error(error.message || 'Ошибка регистрации');
+			toast.error(error.message || 'Ошибка регистрации. Возможно, такой пользователь уже существует.');
 		} finally {
 			isLoading = false;
 		}

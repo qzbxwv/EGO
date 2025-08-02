@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { _ } from 'svelte-i18n';
 	import ChatView from './ChatView.svelte';
-    import { _ } from 'svelte-i18n';
 
-	let { data }: { data: PageData } = $props();
+	let { data } = $props<{ data: PageData }>();
 </script>
 
 <svelte:head>

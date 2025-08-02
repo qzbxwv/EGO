@@ -43,7 +43,10 @@
 			return;
 		}
 		
-		container.innerHTML = await marked(text, { async: true });
+		const html = await marked(text, { async: true });
+		if (!container) return;
+
+		container.innerHTML = html;
 		
 		const codeBlocks = container.querySelectorAll('pre code');
 		codeBlocks.forEach((block) => {

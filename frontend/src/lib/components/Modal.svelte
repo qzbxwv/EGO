@@ -22,6 +22,7 @@
 		tabindex="-1"
 		onkeydown={(e) => e.key === 'Escape' && onclose()}
 	>
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
 			class="bg-secondary border border-tertiary rounded-2xl shadow-2xl shadow-accent/10 w-full max-w-lg m-4 p-6 animate-fade-in-up"
 			onclick={(e) => e.stopPropagation()}
